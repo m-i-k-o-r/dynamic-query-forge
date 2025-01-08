@@ -16,9 +16,7 @@
     <properties>
         <java.version>21</java.version>
 
-        <mapstruct.version>1.5.5.Final</mapstruct.version>
-        <maven-compile.version>3.11.0</maven-compile.version>
-        <springdoc-openapi-starter-webmvc-ui.version>2.0.4</springdoc-openapi-starter-webmvc-ui.version>
+        <jsqlparser.version>5.1</jsqlparser.version>
     </properties>
 
     <dependencies>
@@ -31,6 +29,12 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>${jsqlparser.version}</version>
         </dependency>
 
         <dependency>
