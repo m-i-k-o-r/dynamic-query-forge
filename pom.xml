@@ -17,6 +17,8 @@
         <java.version>21</java.version>
 
         <jsqlparser.version>5.1</jsqlparser.version>
+
+        <lombok.version>1.18.36</lombok.version>
     </properties>
 
     <dependencies>
@@ -31,12 +33,43 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- sql парсер -->
         <dependency>
             <groupId>com.github.jsqlparser</groupId>
             <artifactId>jsqlparser</artifactId>
             <version>${jsqlparser.version}</version>
         </dependency>
 
+        <!-- json -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.2</version> <!-- Use the latest version -->
+        </dependency>
+
+        <!-- транслятор sql в mongodb -->
+        <dependency>
+            <groupId>com.koroli</groupId>
+            <artifactId>queryconverter</artifactId>
+            <version>0.0.1-alpha-snapshot</version>
+        </dependency>
+
+        <!-- бд шечки -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.2</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-core</artifactId>
+            <version>5.3.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- тэсты -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -54,6 +87,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

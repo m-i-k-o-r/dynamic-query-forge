@@ -37,19 +37,22 @@ public class RepositoryProxy implements InvocationHandler {
             return null;
         }
 
+        // Парсинг и обработка исходного SQL-запроса
         String originalQuery = queryAnnotation.value();
         Statement statement = SQLParser.parse(originalQuery);
+        System.out.println(SQLTreeBuilder.buildTree(statement));          // Дерево лога оригинального запроса
 
-        // Вывод "оригинального" дерева (временно здесь)
-        System.out.println(SQLTreeBuilder.buildTree(statement));
-
+        // Сбор параметров и удаление условий с null
         Map<String, Object> paramNameToValue = collectParamNameToValue(method, args);
+        Statement filteredStatement = removeNullParameterConditions(statement, paramNameToValue);
+        System.out.println(SQLTreeBuilder.buildTree(filteredStatement));  // Дерево лога обновленного запроса
 
-        // Удаляем условия с параметрами, значение которых равно null
-        Statement modifiedStatement = removeNullParameterConditions(statement, paramNameToValue);
-
-        // Вывод "измененного" дерева (временно здесь)
-        System.out.println(SQLTreeBuilder.buildTree(modifiedStatement));
+        // Генерация финального запроса
+        String newQuery = switch (databaseType) {
+            case POSTGRESQL -> filteredStatement.toString();
+            case MONGODB -> convertToMongoQuery(filteredStatement);
+            default -> throw new UnsupportedOperationException("Неподдерживаемый тип базы данных");
+        };
 
         // Здесь должен выполняться запрос к бд, но пока что просто возвращаем его
         return modifiedStatement.toString();
@@ -138,5 +141,13 @@ public class RepositoryProxy implements InvocationHandler {
     private Expression filterWhereExpression(Expression expression, Map<String, Object> paramNameToValue) {
         ExpressionTreeEditor editor = new ExpressionTreeEditor(paramNameToValue);
         return editor.modify(expression);
+    }
+
+    private String convertToMongoQuery(Statement statement) {
+        try {
+            return queryConverter.convert(SQLParser.parse(statement.toString()));
+        } catch (QueryConversionException e) {
+            throw new RuntimeException("Ошибка при конвертации SQL в MongoDB запрос", e);
+        }
     }
 }
