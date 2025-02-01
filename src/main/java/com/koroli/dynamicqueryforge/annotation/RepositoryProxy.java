@@ -1,23 +1,49 @@
 package com.koroli.dynamicqueryforge.annotation;
 
+import com.koroli.dynamicqueryforge.executors.DatabaseType;
+import com.koroli.dynamicqueryforge.executors.MongoDBDatabaseClient;
+import com.koroli.dynamicqueryforge.executors.PostgreSQLDatabaseClient;
 import com.koroli.dynamicqueryforge.parser.SQLParser;
 import com.koroli.dynamicqueryforge.parser.SQLTreeBuilder;
+import com.koroli.queryconverter.converters.QueryConverter;
+import com.koroli.queryconverter.exceptions.QueryConversionException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
+import org.bson.Document;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Класс Proxy для обработки аннотации @Query на методах
  */
+@Component
 public class RepositoryProxy implements InvocationHandler {
+
+    @Autowired
+    private QueryConverter queryConverter;
+
+    @Autowired
+    private DatabaseType databaseType;
+
+    @Autowired(required = false)
+    private PostgreSQLDatabaseClient postgreSQLDatabaseClient;
+
+    @Autowired(required = false)
+    private MongoDBDatabaseClient mongoDBDatabaseClient;
 
     /**
      * Метод, который перехватывает вызовы методов интерфейса
@@ -54,10 +80,9 @@ public class RepositoryProxy implements InvocationHandler {
             default -> throw new UnsupportedOperationException("Неподдерживаемый тип базы данных");
         };
 
-        // Здесь должен выполняться запрос к бд, но пока что просто возвращаем его
-        return modifiedStatement.toString();
+        // Выполнение запроса и получение результата
+        return executeQuery(newQuery, paramNameToValue);
     }
-
 
     /**
      * Собирает значения параметров метода в map "имя параметра -> значение"
@@ -143,11 +168,54 @@ public class RepositoryProxy implements InvocationHandler {
         return editor.modify(expression);
     }
 
+
     private String convertToMongoQuery(Statement statement) {
         try {
             return queryConverter.convert(SQLParser.parse(statement.toString()));
         } catch (QueryConversionException e) {
             throw new RuntimeException("Ошибка при конвертации SQL в MongoDB запрос", e);
         }
+    }
+
+
+    private Object executeQuery(String query, Map<String, Object> params) {
+        return switch (databaseType) {
+            case POSTGRESQL -> {
+                ResultSet resultSet = postgreSQLDatabaseClient.executeQuery(query, params);
+                yield processResultSet(resultSet);
+            }
+            case MONGODB -> {
+                Iterable<Document> documents = mongoDBDatabaseClient.executeQuery("users", Document.parse(query));
+                yield processMongoResults(documents);
+            }
+            default -> throw new UnsupportedOperationException("Неподдерживаемый тип базы данных");
+        };
+    }
+
+    private List<Map<String, Object>> processResultSet(ResultSet resultSet) {
+        List<Map<String, Object>> results = new ArrayList<>();
+        try {
+            ResultSetMetaData metaData = resultSet.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            while (resultSet.next()) {
+                Map<String, Object> row = new HashMap<>();
+                for (int i = 1; i <= columnCount; i++) {
+                    row.put(metaData.getColumnName(i), resultSet.getObject(i));
+                }
+                results.add(row);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Ошибка при обработке результатов PostgreSQL", e);
+        }
+        return results;
+    }
+
+    private List<Map<String, Object>> processMongoResults(Iterable<Document> documents) {
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (Document document : documents) {
+            results.add(document);
+        }
+        return results;
     }
 }
