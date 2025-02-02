@@ -1,10 +1,11 @@
-package com.koroli.dynamicqueryforge.annotation;
+package com.koroli.dynamicqueryforge.core.query;
 
-import com.koroli.dynamicqueryforge.executors.DatabaseType;
-import com.koroli.dynamicqueryforge.executors.MongoDBDatabaseClient;
-import com.koroli.dynamicqueryforge.executors.PostgreSQLDatabaseClient;
-import com.koroli.dynamicqueryforge.parser.SQLParser;
-import com.koroli.dynamicqueryforge.parser.SQLTreeBuilder;
+import com.koroli.dynamicqueryforge.core.expression.ExpressionTreeEditor;
+import com.koroli.dynamicqueryforge.core.expression.SQLTreeBuilder;
+import com.koroli.dynamicqueryforge.core.parser.SQLParser;
+import com.koroli.dynamicqueryforge.executor.DatabaseType;
+import com.koroli.dynamicqueryforge.executor.MongoDBDatabaseClient;
+import com.koroli.dynamicqueryforge.executor.PostgreSQLDatabaseClient;
 import com.koroli.queryconverter.converters.QueryConverter;
 import com.koroli.queryconverter.exceptions.QueryConversionException;
 import net.sf.jsqlparser.expression.Expression;
@@ -22,16 +23,13 @@ import java.lang.reflect.Parameter;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Класс Proxy для обработки аннотации @Query на методах
  */
 @Component
-public class RepositoryProxy implements InvocationHandler {
+public class DynamicRepositoryProxy implements InvocationHandler {
 
     @Autowired
     private QueryConverter queryConverter;
@@ -92,7 +90,7 @@ public class RepositoryProxy implements InvocationHandler {
      * @return карта параметров
      */
     private Map<String, Object> collectParamNameToValue(Method method, Object[] args) {
-        Map<String, Object> paramNameToValue = new HashMap<>();
+        Map<String, Object> paramNameToValue = new LinkedHashMap<>();
 
         Parameter[] parameters = method.getParameters();
         Annotation[][] parameterAnnotations = method.getParameterAnnotations();
@@ -171,7 +169,7 @@ public class RepositoryProxy implements InvocationHandler {
 
     private String convertToMongoQuery(Statement statement) {
         try {
-            return queryConverter.convert(SQLParser.parse(statement.toString()));
+            return queryConverter.convert(statement);
         } catch (QueryConversionException e) {
             throw new RuntimeException("Ошибка при конвертации SQL в MongoDB запрос", e);
         }
@@ -185,6 +183,7 @@ public class RepositoryProxy implements InvocationHandler {
                 yield processResultSet(resultSet);
             }
             case MONGODB -> {
+                // TODO: убрать жесткую привязку к названию коллекции
                 Iterable<Document> documents = mongoDBDatabaseClient.executeQuery("users", Document.parse(query));
                 yield processMongoResults(documents);
             }

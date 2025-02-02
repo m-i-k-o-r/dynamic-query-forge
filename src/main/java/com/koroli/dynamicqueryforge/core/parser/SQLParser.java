@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.parser;
+package com.koroli.dynamicqueryforge.core.parser;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;

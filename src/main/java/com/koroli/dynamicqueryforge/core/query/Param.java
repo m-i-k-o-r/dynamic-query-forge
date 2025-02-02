@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.annotation;
+package com.koroli.dynamicqueryforge.core.query;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

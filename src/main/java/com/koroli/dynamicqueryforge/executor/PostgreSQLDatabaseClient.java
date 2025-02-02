@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.executors;
+package com.koroli.dynamicqueryforge.executor;
 
 import java.sql.*;
 import java.util.Map;
@@ -19,7 +19,6 @@ public class PostgreSQLDatabaseClient {
         try (Connection connection = DriverManager.getConnection(url, username, password);
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
-            // Устанавливаем параметры в PreparedStatement
             int index = 1;
             for (Object param : params.values()) {
                 statement.setObject(index++, param);

@@ -1,6 +1,6 @@
 package com.koroli.dynamicqueryforge.config;
 
-import com.koroli.dynamicqueryforge.executors.DatabaseType;
+import com.koroli.dynamicqueryforge.executor.DatabaseType;
 import com.koroli.queryconverter.model.FieldType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

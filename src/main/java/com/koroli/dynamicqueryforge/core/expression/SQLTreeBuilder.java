@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.parser;
+package com.koroli.dynamicqueryforge.core.expression;
 
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
@@ -27,15 +27,18 @@ public class SQLTreeBuilder {
      * @return строковое представление дерева SQL-выражения
      */
     public static String buildTree(Statement statement) {
-        PlainSelect plainSelect = (PlainSelect) statement;
-
         StringBuilder output = new StringBuilder();
-        output.append(wrapInBrackets(plainSelect.toString())).append("\n");
 
-        appendColumns(plainSelect.getSelectItems(), 1, output);
-        appendFrom(plainSelect.getFromItem(), 1, output);
-        appendWhere(plainSelect.getWhere(), 1, output);
-        appendOrderBy(plainSelect.getOrderByElements(), 1, output);
+        if (statement instanceof PlainSelect plainSelect) {
+            output.append(wrapInBrackets(plainSelect.toString())).append("\n");
+
+            appendColumns(plainSelect.getSelectItems(), 1, output);
+            appendFrom(plainSelect.getFromItem(), 1, output);
+            appendWhere(plainSelect.getWhere(), 1, output);
+            appendOrderBy(plainSelect.getOrderByElements(), 1, output);
+        } else {
+            output.append("[ На данный момент нет поддержки не Select запросов ]");
+        }
 
         return output.toString();
     }

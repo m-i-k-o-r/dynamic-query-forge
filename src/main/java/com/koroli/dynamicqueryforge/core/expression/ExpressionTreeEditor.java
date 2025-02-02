@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.annotation;
+package com.koroli.dynamicqueryforge.core.expression;
 
 import com.koroli.dynamicqueryforge.exception.UnsupportedParameterTypeException;
 import net.sf.jsqlparser.expression.*;

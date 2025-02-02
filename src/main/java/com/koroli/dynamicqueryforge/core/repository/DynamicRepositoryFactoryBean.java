@@ -1,17 +1,18 @@
-package com.koroli.dynamicqueryforge.annotation;
+package com.koroli.dynamicqueryforge.core.repository;
 
+import com.koroli.dynamicqueryforge.core.query.DynamicRepositoryProxy;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.lang.reflect.Proxy;
 
-public class RepositoryFactoryBean<T> implements FactoryBean<T> {
+public class DynamicRepositoryFactoryBean<T> implements FactoryBean<T> {
 
     private final Class<T> repositoryInterface;
 
     @Autowired
-    private RepositoryProxy repositoryProxy; // Этот бин должен быть помечен как @Component
+    private DynamicRepositoryProxy dynamicRepositoryProxy; // Этот бин должен быть помечен как @Component
 
-    public RepositoryFactoryBean(Class<T> repositoryInterface) {
+    public DynamicRepositoryFactoryBean(Class<T> repositoryInterface) {
         this.repositoryInterface = repositoryInterface;
     }
 
@@ -20,7 +21,7 @@ public class RepositoryFactoryBean<T> implements FactoryBean<T> {
         return (T) Proxy.newProxyInstance(
                 repositoryInterface.getClassLoader(),
                 new Class<?>[]{repositoryInterface},
-                repositoryProxy);
+                dynamicRepositoryProxy);
     }
 
     @Override

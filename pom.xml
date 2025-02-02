@@ -2,87 +2,116 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.1</version>
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
-    <groupId>com.koroli</groupId>
-    <artifactId>DynamicQueryForge</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+
+    <groupId>com.koroli.dynamicqueryforge</groupId>
+    <artifactId>dynamic-query-forge</artifactId>
+    <version>0.0.1-alpha-snapshot-test</version>
+    <packaging>jar</packaging>
     <name>dynamic-query-forge</name>
+    <description>Библиотека для формирования динамических SQL запросов</description>
 
     <properties>
+        <!-- Core -->
         <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
 
-        <jsqlparser.version>5.1</jsqlparser.version>
+        <!-- Версии плагинов -->
+        <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+        <maven.jar.plugin.version>3.4.2</maven.jar.plugin.version>
+        <maven.source.plugin.version>3.3.1</maven.source.plugin.version>
 
+        <!-- Версии зависимостей -->
         <lombok.version>1.18.36</lombok.version>
+        <spring.context.version>6.2.2</spring.context.version>
+        <spring.boot.version>3.4.2</spring.boot.version>
+        <jsqlparser.version>5.1</jsqlparser.version>
+        <jackson.version>2.18.2</jackson.version>
+        <queryconverter.version>0.0.1-alpha-snapshot</queryconverter.version>
+        <mongodb.driver.version>5.3.0</mongodb.driver.version>
+        <postgresql.driver.version>42.7.2</postgresql.driver.version>
     </properties>
 
     <dependencies>
+        <!-- Базовые аннотации Spring: @Configuration, @Bean и т.д. -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.context.version}</version>
         </dependency>
 
+        <!-- Аннотации Spring: @ConditionalOnProperty, @EnableAutoConfiguration -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <version>${spring.boot.version}</version>
+        </dependency>
+
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
         </dependency>
 
-        <!-- sql парсер -->
+        <!-- SQL парсер -->
         <dependency>
             <groupId>com.github.jsqlparser</groupId>
             <artifactId>jsqlparser</artifactId>
             <version>${jsqlparser.version}</version>
         </dependency>
 
-        <!-- json -->
+        <!-- JSON обработка -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.18.2</version> <!-- Use the latest version -->
+            <version>${jackson.version}</version>
         </dependency>
 
-        <!-- транслятор sql в mongodb -->
+        <!-- Транслятор SQL в MongoDB -->
         <dependency>
             <groupId>com.koroli</groupId>
             <artifactId>queryconverter</artifactId>
-            <version>0.0.1-alpha-snapshot</version>
+            <version>${queryconverter.version}</version>
         </dependency>
 
-        <!-- бд шечки -->
+        <!-- PostgresSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.7.2</version>
+            <version>${postgresql.driver.version}</version>
             <optional>true</optional>
         </dependency>
 
+        <!-- MongoDB -->
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-core</artifactId>
-            <version>5.3.0</version>
+            <version>${mongodb.driver.version}</version>
             <optional>true</optional>
-        </dependency>
-
-        <!-- тэсты -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/m-i-k-o-r/dynamic-query-forge</url>
+        </repository>
+    </distributionManagement>
+
     <build>
         <plugins>
+            <!-- Компиляция -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
                 <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <release>${maven.compiler.release}</release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -92,19 +121,35 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+
+            <!-- Создание JAR-архива -->
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${maven.jar.plugin.version}</version>
                 <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                    </archive>
                 </configuration>
+            </plugin>
+
+            <!-- Формирование архива с исходниками -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>${maven.source.plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
-
 </project>

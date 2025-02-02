@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.executors;
+package com.koroli.dynamicqueryforge.executor;
 
 import com.mongodb.client.*;
 import org.bson.Document;

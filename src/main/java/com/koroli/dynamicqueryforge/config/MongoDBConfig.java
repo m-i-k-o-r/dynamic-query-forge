@@ -1,6 +1,6 @@
 package com.koroli.dynamicqueryforge.config;
 
-import com.koroli.dynamicqueryforge.executors.MongoDBDatabaseClient;
+import com.koroli.dynamicqueryforge.executor.MongoDBDatabaseClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

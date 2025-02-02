@@ -1,5 +1,6 @@
-package com.koroli.dynamicqueryforge.annotation;
+package com.koroli.dynamicqueryforge.core.query;
 
+import com.koroli.dynamicqueryforge.core.repository.DynamicRepositoryFactoryBean;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -21,12 +22,9 @@ public class DynamicQueryRepositoryRegistrar implements ImportBeanDefinitionRegi
 
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
-        // Определяем базовые пакеты для сканирования
         String[] basePackages = getBasePackages(importingClassMetadata);
-        // Создаём сканер (без использования default filters)
-        ClassPathScanningCandidateComponentProvider scanner =
-                new ClassPathScanningCandidateComponentProvider(false, environment);
-        // Добавляем фильтр для поиска @Repository
+
+        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false, environment);
         scanner.addIncludeFilter(new AnnotationTypeFilter(org.springframework.stereotype.Repository.class));
 
         for (String basePackage : basePackages) {
@@ -36,12 +34,11 @@ public class DynamicQueryRepositoryRegistrar implements ImportBeanDefinitionRegi
                 try {
                     Class<?> repositoryInterface = Class.forName(beanClassName);
                     if (repositoryInterface.isInterface()) {
-                        // Регистрируем бин через RepositoryFactoryBean
-                        BeanDefinitionBuilder builder =
-                                BeanDefinitionBuilder.genericBeanDefinition(RepositoryFactoryBean.class);
-                        builder.addConstructorArgValue(repositoryInterface);
-                        // Генерируем имя бина (например, uncapitalized короткое имя интерфейса)
-                        String beanName = StringUtils.uncapitalize(ClassUtils.getShortName(repositoryInterface));
+                        BeanDefinitionBuilder builder = BeanDefinitionBuilder
+                                .genericBeanDefinition(DynamicRepositoryFactoryBean.class)
+                                .addConstructorArgValue(repositoryInterface);
+
+                        String beanName = StringUtils.uncapitalize(ClassUtils.getQualifiedName(repositoryInterface));
                         registry.registerBeanDefinition(beanName, builder.getBeanDefinition());
                     }
                 } catch (ClassNotFoundException e) {
@@ -59,8 +56,8 @@ public class DynamicQueryRepositoryRegistrar implements ImportBeanDefinitionRegi
                 return (String[]) value;
             }
         }
-        // Если не указано, используем пакет, где находится класс с аннотацией @EnableDynamicQueryRepositories
-        return new String[] { ClassUtils.getPackageName(importingClassMetadata.getClassName()) };
+
+        return new String[]{ClassUtils.getPackageName(importingClassMetadata.getClassName())};
     }
 
     @Override
