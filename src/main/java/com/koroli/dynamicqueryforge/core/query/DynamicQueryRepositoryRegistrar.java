@@ -1,20 +1,19 @@
 package com.koroli.dynamicqueryforge.core.query;
 
+import com.koroli.dynamicqueryforge.core.repository.DynamicQueryRepository;
 import com.koroli.dynamicqueryforge.core.repository.DynamicRepositoryFactoryBean;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.EnvironmentAware;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.StringUtils;
 
+import java.util.Arrays;
 import java.util.Map;
-import java.util.Set;
 
 public class DynamicQueryRepositoryRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
 
@@ -23,29 +22,45 @@ public class DynamicQueryRepositoryRegistrar implements ImportBeanDefinitionRegi
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
         String[] basePackages = getBasePackages(importingClassMetadata);
-
-        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false, environment);
-        scanner.addIncludeFilter(new AnnotationTypeFilter(org.springframework.stereotype.Repository.class));
+        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
         for (String basePackage : basePackages) {
-            Set<BeanDefinition> candidates = scanner.findCandidateComponents(basePackage);
-            for (BeanDefinition candidate : candidates) {
-                String beanClassName = candidate.getBeanClassName();
-                try {
-                    Class<?> repositoryInterface = Class.forName(beanClassName);
-                    if (repositoryInterface.isInterface()) {
+            try {
+                String packageSearchPath = "classpath*:" + ClassUtils.convertClassNameToResourcePath(basePackage) + "/**/*.class";
+                Resource[] resources = resolver.getResources(packageSearchPath);
+
+                if (resources.length == 0) {
+                    System.out.println("No resources found in package: " + basePackage);
+                    continue;
+                }
+
+                System.out.println("Found resources: " + Arrays.toString(resources));
+                for (Resource resource : resources) {
+                    String className = extractClassName(resource, basePackage);
+                    System.out.println("Candidate class name: " + className);
+
+                    Class<?> repositoryInterface = Class.forName(className);
+                    if (repositoryInterface.isInterface() && DynamicQueryRepository.class.isAssignableFrom(repositoryInterface)) {
                         BeanDefinitionBuilder builder = BeanDefinitionBuilder
                                 .genericBeanDefinition(DynamicRepositoryFactoryBean.class)
                                 .addConstructorArgValue(repositoryInterface);
 
-                        String beanName = StringUtils.uncapitalize(ClassUtils.getQualifiedName(repositoryInterface));
+                        String beanName = ClassUtils.getShortNameAsProperty(repositoryInterface);
                         registry.registerBeanDefinition(beanName, builder.getBeanDefinition());
                     }
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException("Не удалось загрузить класс " + beanClassName, e);
                 }
+            } catch (Exception e) {
+                throw new RuntimeException("Ошибка при сканировании пакета: " + basePackage, e);
             }
         }
+    }
+
+    private String extractClassName(Resource resource, String basePackage) throws Exception {
+        String resourcePath = resource.getURI().toString();
+        String classPath = resourcePath.substring(resourcePath.indexOf("/classes/") + 9)
+                .replace("/", ".")
+                .replace(".class", "");
+        return classPath;
     }
 
     private String[] getBasePackages(AnnotationMetadata importingClassMetadata) {
