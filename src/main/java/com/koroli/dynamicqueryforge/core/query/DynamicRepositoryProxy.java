@@ -6,12 +6,20 @@ import com.koroli.dynamicqueryforge.core.parser.SQLParser;
 import com.koroli.dynamicqueryforge.executor.DatabaseType;
 import com.koroli.dynamicqueryforge.executor.MongoDBDatabaseClient;
 import com.koroli.dynamicqueryforge.executor.PostgreSQLDatabaseClient;
+import com.koroli.dynamicqueryforge.utils.ExpressionConverterUtils;
 import com.koroli.queryconverter.converters.QueryConverter;
 import com.koroli.queryconverter.exceptions.QueryConversionException;
+import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.JdbcNamedParameter;
+import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.delete.Delete;
+import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.update.Update;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,6 +28,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -71,15 +80,27 @@ public class DynamicRepositoryProxy implements InvocationHandler {
         Statement filteredStatement = removeNullParameterConditions(statement, paramNameToValue);
         System.out.println(SQLTreeBuilder.buildTree(filteredStatement));  // Дерево лога обновленного запроса
 
+        Class<?> returnType = getReturnType(method);
+        boolean isSingleResult = !List.class.isAssignableFrom(method.getReturnType());
+
         // Генерация финального запроса
-        String newQuery = switch (databaseType) {
-            case POSTGRESQL -> filteredStatement.toString();
-            case MONGODB -> convertToMongoQuery(filteredStatement);
+        return switch (databaseType) {
+            case POSTGRESQL -> postgreSQLDatabaseClient.executeQuery(filteredStatement, returnType, isSingleResult);
+            case MONGODB -> {
+                String collectionName = "users";
+                yield mongoDBDatabaseClient.executeQuery(collectionName, filteredStatement, returnType, isSingleResult);
+            }
             default -> throw new UnsupportedOperationException("Неподдерживаемый тип базы данных");
         };
+    }
 
-        // Выполнение запроса и получение результата
-        return executeQuery(newQuery, paramNameToValue);
+    private Class<?> getReturnType(Method method) {
+        if (List.class.isAssignableFrom(method.getReturnType())) {
+            ParameterizedType genericReturnType = (ParameterizedType) method.getGenericReturnType();
+            return (Class<?>) genericReturnType.getActualTypeArguments()[0];
+        } else {
+            return method.getReturnType();
+        }
     }
 
     /**
@@ -125,32 +146,148 @@ public class DynamicRepositoryProxy implements InvocationHandler {
     }
 
     /**
-     * Удаляет условия из WHERE, если соответствующие параметры равны null или отсутствуют в map
+     * Удаляет условия из запроса, если соответствующие параметры равны null или отсутствуют в map
      *
      * @param statement        исходный SQL запрос
      * @param paramNameToValue карта параметров
      * @return модифицированный SQL запрос
      */
     private Statement removeNullParameterConditions(Statement statement, Map<String, Object> paramNameToValue) {
-        if (!(statement instanceof Select select)) {
-            return statement;
-        }
+        return switch (statement) {
+            case Select select -> removeNullParameterConditionsFromSelect(select, paramNameToValue);
+            case Update update -> removeNullParameterConditionsFromUpdate(update, paramNameToValue);
+            case Insert insert -> removeNullParameterConditionsFromInsert(insert, paramNameToValue);
+            case Delete delete -> removeNullParameterConditionsFromDelete(delete, paramNameToValue);
+            default -> statement;
+        };
+    }
 
+    private Statement removeNullParameterConditionsFromSelect(Select select, Map<String, Object> paramNameToValue) {
         if (!(select instanceof PlainSelect plainSelect)) {
-            return statement;
+            return select;
         }
 
         Expression whereExp = plainSelect.getWhere();
 
-        if (whereExp == null) {
-            return statement;
+        if (whereExp != null) {
+            Expression filteredWhere = filterWhereExpression(whereExp, paramNameToValue);
+            plainSelect.setWhere(filteredWhere);
         }
 
-        // Удаляем условия, ссылающиеся на null-параметры
-        Expression filteredWhere = filterWhereExpression(whereExp, paramNameToValue);
-        plainSelect.setWhere(filteredWhere);
+        return select;
+    }
 
-        return statement;
+    private Statement removeNullParameterConditionsFromUpdate(Update update, Map<String, Object> paramNameToValue) {
+        // Обработка WHERE
+        Expression whereExp = update.getWhere();
+        if (whereExp != null) {
+            Expression filteredWhere = filterWhereExpression(whereExp, paramNameToValue);
+            update.setWhere(filteredWhere);
+        }
+
+        // Обработка SET
+        List<Column> columns = update.getColumns();
+        List<Expression> expressions = update.getExpressions();
+        if (columns != null && expressions != null) {
+            List<Expression> filteredExpressions = new ArrayList<>();
+            for (Expression expression : expressions) {
+                Expression filteredExpression = filterWhereExpression(expression, paramNameToValue);
+                filteredExpressions.add(filteredExpression);
+            }
+            update.setExpressions(filteredExpressions);
+        }
+
+        return update;
+    }
+
+    private Statement removeNullParameterConditionsFromInsert(Insert insert, Map<String, Object> paramNameToValue) {
+        // Если вставка через VALUES
+        if (insert.getValues() != null) {
+            ExpressionList expressionList = insert.getValues().getExpressions();
+
+            List<Expression> oldExpressions = expressionList.getExpressions();
+            List<Expression> newExpressions = new ArrayList<>();
+
+            for (Expression expr : oldExpressions) {
+                Expression filteredExpr = filterWhereExpression(expr, paramNameToValue);
+                Expression replacedExpr = replaceParametersWithValues(filteredExpr, paramNameToValue);
+
+                if (replacedExpr != null) {
+                    newExpressions.add(replacedExpr);
+                }
+            }
+            expressionList.setExpressions(newExpressions);
+        }
+
+        // Если INSERT ... SELECT
+        if (insert.getSelect() != null) {
+            removeNullParameterConditionsFromSelect(insert.getSelect(), paramNameToValue);
+        }
+
+        return insert;
+    }
+
+    private Statement removeNullParameterConditionsFromDelete(Delete delete, Map<String, Object> paramNameToValue) {
+        Expression whereExp = delete.getWhere();
+
+        if (whereExp != null) {
+            Expression filteredWhere = filterWhereExpression(whereExp, paramNameToValue);
+            delete.setWhere(filteredWhere);
+        }
+
+        return delete;
+    }
+
+    /**
+     * Проходит по выражению и подставляет значения параметров вместо ссылок.
+     *
+     * @param expression       исходное выражение
+     * @param paramNameToValue карта параметров
+     * @return выражение с подставленными значениями
+     */
+    private Expression replaceParametersWithValues(Expression expression, Map<String, Object> paramNameToValue) {
+        return switch (expression) {
+            case JdbcNamedParameter jdbcParam -> {
+                String paramName = jdbcParam.getName();
+
+                if (paramNameToValue.containsKey(paramName)) {
+                    Object value = paramNameToValue.get(paramName);
+                    if (value != null) {
+                        yield ExpressionConverterUtils.convertParameterValue(value);
+                    }
+                }
+
+                yield expression;
+            }
+
+            // Если узел представляет собой "колонку"
+            case Column column -> {
+                String columnName = column.getColumnName();
+
+                if (paramNameToValue.containsKey(columnName)) {
+                    Object value = paramNameToValue.get(columnName);
+                    if (value != null) {
+                        yield ExpressionConverterUtils.convertParameterValue(value);
+                    }
+                }
+
+                yield expression;
+            }
+
+            // Если это бинарное выражение
+            case BinaryExpression binaryExpression -> {
+                binaryExpression.setLeftExpression(
+                        replaceParametersWithValues(binaryExpression.getLeftExpression(), paramNameToValue)
+                );
+                binaryExpression.setRightExpression(
+                        replaceParametersWithValues(binaryExpression.getRightExpression(), paramNameToValue)
+                );
+                yield binaryExpression;
+            }
+
+            // Если ничего из вышеперечисленного не подошло
+            case null, default -> expression;
+        };
     }
 
     /**
@@ -173,48 +310,5 @@ public class DynamicRepositoryProxy implements InvocationHandler {
         } catch (QueryConversionException e) {
             throw new RuntimeException("Ошибка при конвертации SQL в MongoDB запрос", e);
         }
-    }
-
-
-    private Object executeQuery(String query, Map<String, Object> params) {
-        return switch (databaseType) {
-            case POSTGRESQL -> {
-                ResultSet resultSet = postgreSQLDatabaseClient.executeQuery(query, params);
-                yield processResultSet(resultSet);
-            }
-            case MONGODB -> {
-                // TODO: убрать жесткую привязку к названию коллекции
-                Iterable<Document> documents = mongoDBDatabaseClient.executeQuery("users", Document.parse(query));
-                yield processMongoResults(documents);
-            }
-            default -> throw new UnsupportedOperationException("Неподдерживаемый тип базы данных");
-        };
-    }
-
-    private List<Map<String, Object>> processResultSet(ResultSet resultSet) {
-        List<Map<String, Object>> results = new ArrayList<>();
-        try {
-            ResultSetMetaData metaData = resultSet.getMetaData();
-            int columnCount = metaData.getColumnCount();
-
-            while (resultSet.next()) {
-                Map<String, Object> row = new HashMap<>();
-                for (int i = 1; i <= columnCount; i++) {
-                    row.put(metaData.getColumnName(i), resultSet.getObject(i));
-                }
-                results.add(row);
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при обработке результатов PostgreSQL", e);
-        }
-        return results;
-    }
-
-    private List<Map<String, Object>> processMongoResults(Iterable<Document> documents) {
-        List<Map<String, Object>> results = new ArrayList<>();
-        for (Document document : documents) {
-            results.add(document);
-        }
-        return results;
     }
 }
