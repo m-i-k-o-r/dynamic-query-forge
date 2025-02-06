@@ -13,14 +13,18 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+/**
+ * Утилитарный класс для преобразования различных типов параметров в объекты Expression.
+ */
 @UtilityClass
 public class ExpressionConverterUtils {
 
     /**
-     * Конвертирует значение параметра в соответствующий тип Expression
+     * Преобразует значение параметра в соответствующий тип Expression.
      *
      * @param value значение параметра
-     * @return объект Expression, соответствующий значению
+     * @return объект типа Expression, соответствующий значению
+     * @throws UnsupportedParameterTypeException если тип параметра не поддерживается
      */
     public static Expression convertParameterValue(Object value) {
         return switch (value) {
@@ -56,7 +60,7 @@ public class ExpressionConverterUtils {
             case LocalDateTime localDateTime -> new TimestampValue(localDateTime.toString());
 
             // === Бинарные данные ===
-            case byte[] bytes -> new HexValue(bytesToHex(bytes));
+            case byte[] bytes -> new HexValue(convertBytesToHex(bytes));
 
             default -> throw new UnsupportedParameterTypeException(
                     "Unsupported parameter type: " + value.getClass().getName()
@@ -64,7 +68,13 @@ public class ExpressionConverterUtils {
         };
     }
 
-    private static String bytesToHex(byte[] bytes) {
+    /**
+     * Преобразует массив байт в {@code String}.
+     *
+     * @param bytes массив байт
+     * @return строка, содержащая шестнадцатеричное представление массива байт
+     */
+    private static String convertBytesToHex(byte[] bytes) {
         StringBuilder result = new StringBuilder();
         for (byte b : bytes) {
             result.append(String.format("%02X", b));

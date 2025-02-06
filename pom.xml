@@ -5,7 +5,7 @@
 
     <groupId>com.koroli.dynamicqueryforge</groupId>
     <artifactId>dynamic-query-forge</artifactId>
-    <version>0.0.2-alpha-snapshot-test</version>
+    <version>0.0.3-alpha-snapshot-test</version>
     <packaging>jar</packaging>
     <name>dynamic-query-forge</name>
     <description>Библиотека для формирования динамических SQL запросов</description>

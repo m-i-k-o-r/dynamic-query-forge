@@ -1,8 +1,8 @@
 package com.koroli.dynamicqueryforge.executor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
+import com.koroli.dynamicqueryforge.exception.QueryExecutionException;
+import com.koroli.dynamicqueryforge.utils.ResultMappingUtils;
+import lombok.AllArgsConstructor;
 import net.sf.jsqlparser.statement.Statement;
 
 import java.sql.*;
@@ -11,59 +11,40 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Клиент для выполнения SQL-запросов к базе данных PostgreSQL.
+ */
+@AllArgsConstructor
 public class PostgreSQLDatabaseClient {
 
     private final String url;
     private final String username;
     private final String password;
-    private final ObjectMapper objectMapper;
-
-    public PostgreSQLDatabaseClient(String url, String username, String password) {
-        this.url = url;
-        this.username = username;
-        this.password = password;
-        this.objectMapper = new ObjectMapper();
-    }
 
     /**
-     * Универсальный метод для выполнения запроса.
-     * Если метод возвращает список, возвращается `List<T>`.
-     * Если метод ожидает единичный объект, возвращается `T`.
+     * Выполняет SQL-запрос и возвращает результат.
      *
-     * @param sql      SQL-запрос
-     * @param clazz    класс, в который нужно мапить результат
-     * @param <T>      тип результата
-     * @param isSingle ожидается ли единичный результат
+     * @param queryStatement SQL-запрос в виде объекта Statement
+     * @param clazz          класс, в который нужно мапить результат
+     * @param <T>            тип результата
+     * @param isSingle       ожидается ли единичный результат
      * @return список объектов или единичный объект
      */
-    public <T> Object executeQuery(Statement sql, Class<T> clazz, boolean isSingle) {
-        List<Map<String, Object>> resultSet;
+    public <T> Object executeQuery(Statement queryStatement, Class<T> clazz, boolean isSingle) {
+        List<Map<String, Object>> resultSetData;
 
         try (PreparedStatement statement = DriverManager
                 .getConnection(url, username, password)
-                .prepareStatement(sql.toString())
+                .prepareStatement(queryStatement.toString())
         ) {
-            try (ResultSet r = statement.executeQuery()) {
-                resultSet = processResultSet(r);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSetData = processResultSet(resultSet);
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Ошибка при выполнении SQL-запроса", e);
+            throw new QueryExecutionException("Ошибка при выполнении SQL-запроса", e);
         }
 
-        try {
-            String json = objectMapper.writeValueAsString(resultSet);
-
-            if (resultSet.isEmpty()) return null;
-
-            if (isSingle) {
-                return objectMapper.convertValue(resultSet.getFirst(), clazz);
-            } else {
-                CollectionType listType = objectMapper.getTypeFactory().constructCollectionType(List.class, clazz);
-                return objectMapper.readValue(json, listType);
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Ошибка при преобразовании результата запроса в объект " + clazz.getName(), e);
-        }
+        return ResultMappingUtils.mapResult(resultSetData, clazz, isSingle);
     }
 
     /**
