@@ -3,9 +3,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.koroli.dynamicqueryforge</groupId>
+    <groupId>com.koroli</groupId>
     <artifactId>dynamic-query-forge</artifactId>
-    <version>0.0.3-alpha-snapshot-test</version>
+    <version>0.0.4-alpha-snapshot-test</version>
     <packaging>jar</packaging>
     <name>dynamic-query-forge</name>
     <description>Библиотека для формирования динамических SQL запросов</description>
@@ -19,8 +19,8 @@
 
         <!-- Версии плагинов -->
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
-        <maven.jar.plugin.version>3.4.2</maven.jar.plugin.version>
         <maven.source.plugin.version>3.3.1</maven.source.plugin.version>
+        <maven.clean.plugin.version>3.3.1</maven.clean.plugin.version>
 
         <!-- Версии зависимостей -->
         <lombok.version>1.18.36</lombok.version>
@@ -28,20 +28,23 @@
         <spring.boot.version>3.4.2</spring.boot.version>
         <jsqlparser.version>5.1</jsqlparser.version>
         <jackson.version>2.18.2</jackson.version>
-        <queryconverter.version>0.0.1-alpha-snapshot</queryconverter.version>
+        <queryconverter.version>0.0.2-alpha-snapshot</queryconverter.version>
         <mongodb.driver.version>5.3.0</mongodb.driver.version>
         <postgresql.driver.version>42.7.2</postgresql.driver.version>
+
+        <!-- Логирование -->
+        <log4j.version>2.23.1</log4j.version>
     </properties>
 
     <dependencies>
-        <!-- Базовые аннотации Spring: @Configuration, @Bean и т.д. -->
+        <!-- Spring Context -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
             <version>${spring.context.version}</version>
         </dependency>
 
-        <!-- Аннотации Spring: @ConditionalOnProperty, @EnableAutoConfiguration -->
+        <!-- Spring Boot Autoconfigure -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
@@ -56,28 +59,28 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- SQL парсер -->
+        <!-- SQL Parser -->
         <dependency>
             <groupId>com.github.jsqlparser</groupId>
             <artifactId>jsqlparser</artifactId>
             <version>${jsqlparser.version}</version>
         </dependency>
 
-        <!-- JSON обработка -->
+        <!-- JSON Processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
         </dependency>
 
-        <!-- Транслятор SQL в MongoDB -->
+        <!-- SQL to MongoDB Translator -->
         <dependency>
             <groupId>com.koroli</groupId>
-            <artifactId>queryconverter</artifactId>
+            <artifactId>query-converter</artifactId>
             <version>${queryconverter.version}</version>
         </dependency>
 
-        <!-- PostgresSQL -->
+        <!-- PostgreSQL Driver -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
@@ -85,12 +88,19 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- MongoDB -->
+        <!-- MongoDB Driver -->
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-core</artifactId>
             <version>${mongodb.driver.version}</version>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>${log4j.version}</version>
         </dependency>
     </dependencies>
 
@@ -103,7 +113,14 @@
 
     <build>
         <plugins>
-            <!-- Компиляция -->
+            <!-- Clean Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>${maven.clean.plugin.version}</version>
+            </plugin>
+
+            <!-- Compiler Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -122,21 +139,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Создание JAR-архива -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>${maven.jar.plugin.version}</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-
-            <!-- Формирование архива с исходниками -->
+            <!-- Create jar with sources -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>

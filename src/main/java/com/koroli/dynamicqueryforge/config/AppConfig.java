@@ -26,9 +26,13 @@ public class AppConfig {
     @Value("${query.converter.aggregationBatchSize:1000}")
     private int aggregationBatchSize;
 
-    /** Логирование запросов */
+    /** Логирование конвертации запросов для MongoDB */
     @Value("${query.converter.logQueryEnabled:false}")
     private boolean logQueryEnabled;
+
+    /** Логирование запросов */
+    @Value("${database.logQueryEnabled:false}")
+    private boolean logModifiedQueryEnabled;
 
     @Bean
     public QueryConverter queryConverter() {
@@ -43,5 +47,10 @@ public class AppConfig {
     @Bean
     public DatabaseType databaseType() {
         return DatabaseType.valueOf(databaseType.toUpperCase());
+    }
+
+    @Bean
+    public boolean logModifiedQueryEnabled() {
+        return logModifiedQueryEnabled;
     }
 }

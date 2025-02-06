@@ -196,11 +196,13 @@ public class ExpressionTreeEditor {
      * Заменяет параметр {@code JdbcNamedParameter} на его значение.
      *
      * @param jdbcParam параметр
-     * @return выражение с подставленным значением или исходный параметр, если значение отсутствует
+     * @return выражение с подставленным значением или null, если значение отсутствует
      */
     private Expression replaceParameter(JdbcNamedParameter jdbcParam) {
         Object paramValue = paramNameToValue.get(jdbcParam.getName());
-        return paramValue != null ? ExpressionConverterUtils.convertParameterValue(paramValue) : jdbcParam;
+        return paramValue != null
+                ? ExpressionConverterUtils.convertParameterValue(paramValue)
+                : null;
     }
 
     /**
