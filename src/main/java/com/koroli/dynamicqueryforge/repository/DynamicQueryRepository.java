@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.core.repository;
+package com.koroli.dynamicqueryforge.repository;
 
 /**
  * Базовый интерфейс для динамических репозиториев.

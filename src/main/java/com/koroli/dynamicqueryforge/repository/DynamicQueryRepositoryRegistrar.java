@@ -1,7 +1,6 @@
-package com.koroli.dynamicqueryforge.core.query;
+package com.koroli.dynamicqueryforge.repository;
 
-import com.koroli.dynamicqueryforge.core.repository.DynamicQueryRepository;
-import com.koroli.dynamicqueryforge.core.repository.DynamicRepositoryFactoryBean;
+import com.koroli.dynamicqueryforge.annotation.EnableDynamicQueryRepositories;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.EnvironmentAware;
@@ -19,10 +18,9 @@ import java.util.Map;
  */
 public class DynamicQueryRepositoryRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
 
-    private Environment environment;
-
     /**
-     * Регистрирует определения бинов для интерфейсов репозиториев, которые наследуются от {@link DynamicQueryRepository}.
+     * Регистрирует определения бинов для интерфейсов репозиториев,
+     * которые наследуются от {@link DynamicQueryRepository}.
      *
      * @param importingClassMetadata метаданные класса-потомка
      * @param registry               реестр определения бинов
@@ -61,8 +59,16 @@ public class DynamicQueryRepositoryRegistrar implements ImportBeanDefinitionRegi
      */
     private String extractClassName(Resource resource, String basePackage) throws Exception {
         String resourcePath = resource.getURI().toString();
-        return resourcePath.substring(resourcePath.indexOf("/classes/") + 9)
-                .replace("/", ".")
+
+        String basePath = ClassUtils.convertClassNameToResourcePath(basePackage);
+        int index = resourcePath.indexOf(basePath);
+
+        if (index == -1) {
+            throw new IllegalArgumentException("Не найден базовый путь пакета в " + resourcePath);
+        }
+
+        return resourcePath.substring(index)
+                .replace('/', '.')
                 .replace(".class", "");
     }
 
@@ -102,6 +108,6 @@ public class DynamicQueryRepositoryRegistrar implements ImportBeanDefinitionRegi
 
     @Override
     public void setEnvironment(Environment environment) {
-        this.environment = environment;
+
     }
 }

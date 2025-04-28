@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.utils;
+package com.koroli.dynamicqueryforge.util;
 
 import com.koroli.dynamicqueryforge.exception.UnsupportedParameterTypeException;
 import lombok.experimental.UtilityClass;
@@ -17,7 +17,7 @@ import java.time.LocalTime;
  * Утилитарный класс для преобразования различных типов параметров в объекты Expression.
  */
 @UtilityClass
-public class ExpressionConverterUtils {
+public class ExpressionConverter {
 
     /**
      * Преобразует значение параметра в соответствующий тип Expression.

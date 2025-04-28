@@ -1,9 +1,10 @@
-package com.koroli.dynamicqueryforge.core.expression;
+package com.koroli.dynamicqueryforge.expression;
 
-import com.koroli.dynamicqueryforge.utils.ExpressionConverterUtils;
+import net.sf.jsqlparser.expression.Expression;
+
+import com.koroli.dynamicqueryforge.util.ExpressionConverter;
 import lombok.AllArgsConstructor;
 import net.sf.jsqlparser.expression.BinaryExpression;
-import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.JdbcNamedParameter;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
@@ -21,7 +22,8 @@ import java.util.function.Supplier;
  * Позволяет модифицировать выражения с учётом значений параметров.
  */
 @AllArgsConstructor
-public class ExpressionTreeEditor {
+public class ExpressionModifier {
+
     private final Map<String, Object> paramNameToValue;
 
     /**
@@ -201,7 +203,7 @@ public class ExpressionTreeEditor {
     private Expression replaceParameter(JdbcNamedParameter jdbcParam) {
         Object paramValue = paramNameToValue.get(jdbcParam.getName());
         return paramValue != null
-                ? ExpressionConverterUtils.convertParameterValue(paramValue)
+                ? ExpressionConverter.convertParameterValue(paramValue)
                 : null;
     }
 
@@ -227,7 +229,7 @@ public class ExpressionTreeEditor {
             }
 
             if (checkMethod == null || checkMethod.test((Expression) param.getParent())) {
-                setter.accept(ExpressionConverterUtils.convertParameterValue(paramValue));
+                setter.accept(ExpressionConverter.convertParameterValue(paramValue));
             }
         }
     }

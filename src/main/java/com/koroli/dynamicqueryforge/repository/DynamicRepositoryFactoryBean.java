@@ -1,6 +1,6 @@
-package com.koroli.dynamicqueryforge.core.repository;
+package com.koroli.dynamicqueryforge.repository;
 
-import com.koroli.dynamicqueryforge.core.query.DynamicRepositoryProxy;
+import com.koroli.dynamicqueryforge.processing.RepositoryMethodInterceptor;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -14,7 +14,7 @@ public class DynamicRepositoryFactoryBean<T> implements FactoryBean<T> {
     private final Class<T> repositoryInterface;
 
     @Autowired
-    private DynamicRepositoryProxy dynamicRepositoryProxy;
+    private RepositoryMethodInterceptor dynamicRepositoryProxy;
 
     public DynamicRepositoryFactoryBean(Class<T> repositoryInterface) {
         this.repositoryInterface = repositoryInterface;

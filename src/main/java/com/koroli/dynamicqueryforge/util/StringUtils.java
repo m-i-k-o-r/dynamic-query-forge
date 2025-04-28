@@ -1,4 +1,4 @@
-package com.koroli.dynamicqueryforge.utils;
+package com.koroli.dynamicqueryforge.util;
 
 import lombok.experimental.UtilityClass;
 
@@ -10,6 +10,7 @@ import java.util.List;
  */
 @UtilityClass
 public class StringUtils {
+
     private static final String BRACKET_LEFT        = "[";
     private static final String BRACKET_RIGHT       = "]";
     private static final String CURLY_BRACKET_LEFT  = "{";

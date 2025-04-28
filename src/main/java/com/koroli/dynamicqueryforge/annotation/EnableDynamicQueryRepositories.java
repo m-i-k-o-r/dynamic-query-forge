@@ -1,5 +1,6 @@
-package com.koroli.dynamicqueryforge.core.query;
+package com.koroli.dynamicqueryforge.annotation;
 
+import com.koroli.dynamicqueryforge.repository.DynamicQueryRepositoryRegistrar;
 import org.springframework.context.annotation.Import;
 import java.lang.annotation.*;
 

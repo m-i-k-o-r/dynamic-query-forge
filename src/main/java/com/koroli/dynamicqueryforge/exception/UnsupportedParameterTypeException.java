@@ -1,6 +1,7 @@
 package com.koroli.dynamicqueryforge.exception;
 
-public class UnsupportedParameterTypeException extends RuntimeException {
+public class UnsupportedParameterTypeException extends DynamicQueryException {
+
     public UnsupportedParameterTypeException(String message) {
         super(message);
     }
